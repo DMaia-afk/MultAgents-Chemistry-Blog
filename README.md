@@ -142,6 +142,15 @@ project/
 - LangChain for model abstraction.
 
 ---
+## Images
+- **Start_crew**:
+![Start_crew](img/start_img)
+
+- **Second_task**:
+![task_2](img/task_2)
+
+- **Result_example**:
+![Result_ex](img/Result_img)
 
 ## Technical Assessment (summary)
 
