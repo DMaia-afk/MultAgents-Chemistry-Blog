@@ -144,7 +144,7 @@ project/
 ---
 ## Images
 - **Start_crew**:
-![Start_crew](img/start_img)
+![Start_crew](img/start_img.png)
 
 - **Second_task**:
 ![task_2](img/task_2)
