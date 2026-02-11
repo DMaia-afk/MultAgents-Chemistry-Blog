@@ -147,10 +147,10 @@ project/
 ![Start_crew](img/start_img.png)
 
 - **Second_task**:
-![task_2](img/task_2)
+![task_2](img/task_2.png)
 
 - **Result_example**:
-![Result_ex](img/Result_img)
+![Result_ex](img/Result_img.png)
 
 ## Technical Assessment (summary)
 
