@@ -17,230 +17,149 @@ warnings.filterwarnings('ignore')
 
 # Create a CrewAI LLM object that points to the local Ollama instance.
 # Use the 'ollama/' prefix so CrewAI uses the local provider instead of OpenAI.
-my_llm = LLM(
-    model="ollama/llama3.2",
+model_content = LLM(
+    model="ollama/llama3.2:latest",
+    base_url="http://localhost:11434"
+)
+model_writer = LLM(
+    model="ollama/phi3.5:latest",
+    base_url="http://localhost:11434"
+)
+model_tool = LLM(
+    model="ollama/qwen2.5:3b",
     base_url="http://localhost:11434" 
 )
 
+topic = ["The Role of pH in Food Processing", "The Crucial Role of pH in Biological Systems"]
+
 strategy_agent = Agent(
-    role="Scientific Content Strategist",
-    goal="Define high-value, relevant chemistry topics aligned with the blog's educational goals",
-    backstory="You are responsible for the scientific content strategy of a chemistry blog. "
-              "You decide which topics should be published based on educational value, audience level "
-              "and long-term content pillars. You do not write content or explain chemistry concepts. "
-              "Your decisions guide all downstream agents.",
+    role="Scientific Strategy Agent for Chemistry Blog",
+    goal="Define high-value, relevant chemistry topics aligned with the blog's educational goals and Structure chemistry content around search intent without altering scientific accuracy",
+    backstory="You are responsible for the scientific content strategy of a chemistry blog."
+              "You decide which topics should be published based on educational value, audience level"
+              "and long-term content pillars. You do not write the full content; your focus is purely on structure and keywords."
+              "Your decisions guide all downstream agents."
+              "You specialize in SEO for scientific and educational content."
+              "You analyze how students and readers search for chemistry topics like topic."
+              "You define primary and secondary keywords, search intent and an optimal article structure."
+              "You never repeat a {topic} that has already been covered in the blog.",
     allow_delegation=False,
 	verbose=True,
     memory = False,
-    llm=my_llm
+    llm=model_tool,
+    temperature=0.6
 )
 
 chemistry_expert = Agent(
-    role="Chemistry Subject Matter Expert",
-    goal="Provide scientifically accurate definitions, laws, formulas and conceptual boundaries for topic",
+    role="Chemistry Subject Matter Expert and Scientific Chemistry Reviewer",
+    goal="Provide scientifically accurate definitions, laws, formulas and conceptual boundaries for topic and Review the article for scientific accuracy, clarity and conceptual consistency",
     backstory="You are a chemistry expert responsible for ensuring scientific rigor. "
               "You define correct concepts, equations, mechanisms and known exceptions related to topic. "
               "You identify common misconceptions and define what can and cannot be simplified. "
-              "Your output is authoritative and technically precise.",
-    allow_delegation=False,
-    verbose=True,
-    llm=my_llm
-)
-
-seo_researcher = Agent(
-    role="Scientific SEO Researcher",
-    goal="Structure chemistry content around search intent without altering scientific accuracy",
-    backstory="You specialize in SEO for scientific and educational content. "
-              "You analyze how students and readers search for chemistry topics like topic. "
-              "You define primary and secondary keywords, search intent and an optimal article structure. "
-              "You never modify or reinterpret chemistry concepts.",
-    allow_delegation=False,
-    verbose=True,
-    llm=my_llm
-)
-
-didactic_agent = Agent(
-    role="Didactic Chemistry Educator",
-    goal="Translate rigorous chemistry concepts into accessible explanations for the target audience",
-    backstory="You are an experienced chemistry educator. "
-              "Your task is to translate complex scientific explanations into clear and pedagogically sound language. "
-              "You may use safe analogies when explicitly allowed, but you never introduce new scientific information "
-              "or contradict the chemistry expert.",
-    allow_delegation=False,
-    verbose=True,
-    llm=my_llm
-)
-
-technical_writer = Agent(
-    role="Technical Chemistry Writer",
-    goal="Write a clear, structured and accurate chemistry article based on provided inputs",
-    backstory="You are a technical writer specialized in chemistry content. "
-              "You write the full article using the structure defined by the SEO researcher "
-              "and the explanations validated by the chemistry expert and didactic agent. "
-              "You do not introduce new concepts, analogies or interpretations.",
-    allow_delegation=False,
-    verbose=True,
-    llm=my_llm
-)
-
-scientific_reviewer = Agent(
-    role="Scientific Chemistry Reviewer",
-    goal="Review the article for scientific accuracy, clarity and conceptual consistency",
-    backstory="You are a rigorous scientific reviewer with a strong background in chemistry education. "
+              "Your output is authoritative and technically precise."
+              "You are a rigorous scientific reviewer with a strong background in chemistry education. "
               "You verify terminology, units, equations and conceptual coherence. "
               "You identify inaccuracies, ambiguities and dangerous oversimplifications. "
               "You suggest precise corrections without rewriting the entire article.",
     allow_delegation=False,
     verbose=True,
-    llm=my_llm
+    llm=model_writer,
+    temperature=0.2
 )
 
-seo_onpage_agent = Agent(
-    role="SEO On-page Optimizer",
-    goal="Optimize chemistry content for search engines without altering scientific meaning",
-    backstory="You specialize in on-page SEO for scientific content. "
-              "You refine titles, headings, meta descriptions and internal links "
-              "while preserving the exact scientific meaning of the article. "
-              "You avoid clickbait and misleading simplifications.",
-    allow_delegation=False,
-    verbose=True,
-    llm=my_llm
-)
-
-applications_agent = Agent(
-    role="Chemistry Applications Specialist",
-    goal="Connect chemistry concepts to real-world, industrial or laboratory applications",
-    backstory="You focus on practical applications of chemistry concepts. "
+didactic_agent = Agent(
+    role="Didactic Chemistry Educator and Chemistry Applications Specialist",
+    goal="Translate rigorous chemistry concepts into accessible explanations for the target audience and Connect chemistry concepts to real-world, industrial or laboratory applications",
+    backstory="You are an experienced chemistry educator. "
+              "Your task is to translate complex scientific explanations into clear and pedagogically sound language. "
+              "You may use safe analogies when explicitly allowed, but you never introduce new scientific information "
+              "or contradict the chemistry expert."
+              "You focus on practical applications of chemistry concepts. "
               "You relate theory to real-world examples such as industrial processes, materials, "
               "laboratory techniques or everyday phenomena. "
               "All examples must be factual and scientifically accurate.",
     allow_delegation=False,
     verbose=True,
-    llm=my_llm
+    llm=model_content,
+    temperature=0.5
 )
 
-# Create Tasks and Crew
+final_editor = Agent(
+    role="Technical Editor and SEO Integrity Guardian",
+    goal="Finalize the chemistry article by ensuring 100% scientific accuracy and perfect SEO optimization.",
+    backstory=(
+        "You are the final gatekeeper of the blog. Your mission is twofold: "
+        "1. Technical Integrity: You meticulously audit the text to ensure no chemistry terms, "
+        "formulas or nomenclatures were distorted during writing. "
+        "2. SEO Finalization: You polish titles, meta-descriptions, and H1-H3 tags for maximum search "
+        "visibility without ever using clickbait. "
+        "You receive a draft and deliver a publishing-ready masterpiece. "
+        "You never compromise scientific truth for the sake of an SEO keyword."
+    ),
+    allow_delegation=False,
+    verbose=True,
+    memory=False,
+    llm=model_tool
+)
+
+
+
 strategy_task = Task(
     description=(
-        "Define the most relevant chemistry topic to be published. "
-        "The topic must align with the blog's educational goals, target audience level "
-        "and long-term content pillars."
+        "1. Define a high-value chemistry topic aligned with our educational pillars.\n"
+        "2. Conduct SEO research for this topic: identify primary/secondary keywords and search intent.\n"
+        "3. Create a detailed article outline (H1-H3) that balances pedagogy with SEO structure."
     ),
     expected_output=(
-        "A structured topic plan including:\n"
-        "- Selected topic\n"
-        "- Educational objective\n"
-        "- Target audience level\n"
-        "- Content pillar"
+        "A comprehensive content blueprint including: Selected Topic, Target Audience, "
+        "Primary/Secondary Keywords, Search Intent, and a detailed H1-H3 Outline."
     ),
     agent=strategy_agent
 )
 
-chemistry_expert_task = Task(
+expert_science_task = Task(
     description=(
-        "Provide a scientifically rigorous explanation of the selected topic. "
-        "Define all relevant concepts, laws, formulas, equations and known exceptions. "
-        "Identify common misconceptions and define acceptable simplification boundaries."
+        "Based on the blueprint, provide a rigorous scientific explanation. "
+        "Define laws, IUPAC names, formulas (using LaTeX), and reaction mechanisms. "
+        "Explicitly list common misconceptions and set 'red lines' for what cannot be simplified "
+        "to ensure the content remains factually bulletproof."
     ),
     expected_output=(
-        "A technical chemistry brief including:\n"
-        "- Formal definitions\n"
-        "- Equations and formulas (when applicable)\n"
-        "- Key scientific principles\n"
-        "- Common misconceptions\n"
-        "- Simplification limits"
+        "A technical dossier containing: Exact formulas, formal definitions, "
+        "detailed scientific principles, and a list of forbidden oversimplifications."
     ),
     agent=chemistry_expert
 )
 
-seo_research_task = Task(
+didactic_writing_task = Task(
     description=(
-        "Analyze search intent for the selected chemistry topic and define an optimal article structure. "
-        "Identify primary and secondary keywords without altering scientific meaning."
+        "Draft the full article. You must translate the technical dossier into accessible language "
+        "without losing accuracy. Integrate real-world applications (industrial/laboratory) "
+        "throughout the text to maintain engagement. Follow the SEO outline strictly."
     ),
     expected_output=(
-        "An SEO research report including:\n"
-        "- Primary keyword\n"
-        "- Secondary keywords\n"
-        "- Search intent\n"
-        "- Recommended article outline (H1–H3)"
-    ),
-    agent=seo_researcher
-)
-
-didactic_task = Task(
-    description=(
-        "Translate the rigorous chemistry explanation into an accessible and pedagogically sound version "
-        "appropriate for the defined audience level. "
-        "Use safe analogies only when appropriate and never introduce new scientific information."
-    ),
-    expected_output=(
-        "A didactic explanation including:\n"
-        "- Clear, audience-appropriate explanations\n"
-        "- Approved analogies (if applicable)\n"
-        "- Pedagogical notes or warnings"
+        "A complete, fluid chemistry article draft that connects theory to practice, "
+        "written in a pedagogical tone and formatted in Markdown."
     ),
     agent=didactic_agent
 )
 
-writing_task = Task(
+final_optimization_task = Task(
     description=(
-        "Write the full chemistry article using the approved structure, scientific content "
-        "and didactic explanations. "
-        "Ensure clarity, logical flow and technical accuracy."
+        "Final audit of the article. Check every formula, unit, and chemical term for accuracy. "
+        "Then, optimize the On-page SEO: refine the title tag, meta description, "
+        "and ensure keywords are naturally integrated. Fix any Markdown formatting issues."
     ),
     expected_output=(
-        "A complete draft of the chemistry article, ready for scientific review."
+        "The final publishing-ready article in Markdown, including SEO Metadata "
+        "(Title, Description, Keywords) and a 'Final Integrity' confirmation."
     ),
-    agent=technical_writer
-)
-
-review_task = Task(
-    description=(
-        "Review the article for scientific accuracy, conceptual consistency, correct terminology "
-        "and unit usage. Identify errors, ambiguities or dangerous oversimplifications."
-    ),
-    expected_output=(
-        "A review report including:\n"
-        "- Identified issues\n"
-        "- Required corrections\n"
-        "- Suggested precise adjustments"
-    ),
-    agent=scientific_reviewer
-)
-
-seo_onpage_task = Task(
-    description=(
-        "Optimize the reviewed article for on-page SEO while preserving exact scientific meaning. "
-        "Refine titles, headings, meta description and internal linking."
-    ),
-    expected_output=(
-        "On-page SEO deliverables including:\n"
-        "- SEO-optimized title\n"
-        "- Meta description\n"
-        "- Optimized headings\n"
-        "- Internal linking suggestions"
-    ),
-    agent=seo_onpage_agent
-)
-
-applications_task = Task(
-    description=(
-        "Provide real-world applications related to the chemistry topic. "
-        "Connect theory to industry, laboratory practice or everyday phenomena "
-        "using only factual and scientifically accurate examples."
-    ),
-    expected_output=(
-        "A list of real-world chemistry applications with brief explanations."
-    ),
-    agent=applications_agent
+    agent=final_editor
 )
 
 crew = Crew(
-    agents=[strategy_agent, chemistry_expert, seo_researcher, didactic_agent,
-            technical_writer, scientific_reviewer, seo_onpage_agent, applications_agent],
-    tasks=[strategy_task, chemistry_expert_task, seo_research_task, didactic_task,
-           writing_task, review_task, seo_onpage_task, applications_task],
+    agents=[strategy_agent, chemistry_expert, didactic_agent, final_editor],
+    tasks=[strategy_task, expert_science_task, didactic_writing_task, final_optimization_task],
     verbose=True,
     memory = False,
 )
